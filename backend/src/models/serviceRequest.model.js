@@ -181,6 +181,4 @@ serviceRequestSchema.post('save', async function () {
   }
 });
 
-const ServiceRequest = mongoose.model('ServiceRequest', serviceRequestSchema);
-
-module.exports = ServiceRequest;
+module.exports = mongoose.models.ServiceRequest || mongoose.model('ServiceRequest', serviceRequestSchema);
