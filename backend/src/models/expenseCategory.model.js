@@ -46,7 +46,6 @@ expenseCategorySchema.statics.initDefaultCategories = async function() {
 };
 
 // Índice para búsqueda
-expenseCategorySchema.index({ name: 1 });
 
 const ExpenseCategory = mongoose.model('ExpenseCategory', expenseCategorySchema);
 

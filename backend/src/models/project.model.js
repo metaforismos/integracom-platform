@@ -158,7 +158,6 @@ const projectSchema = new mongoose.Schema(
 );
 
 // Índices para búsquedas eficientes
-projectSchema.index({ name: 1 });
 projectSchema.index({ status: 1 });
 projectSchema.index({ 'clients': 1 });
 projectSchema.index({ 'technician': 1 });

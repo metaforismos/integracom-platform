@@ -25,7 +25,6 @@ const rejectionReasonSchema = new mongoose.Schema(
 );
 
 // Índice para búsqueda
-rejectionReasonSchema.index({ name: 1 });
 
 const RejectionReason = mongoose.model('RejectionReason', rejectionReasonSchema);
 
