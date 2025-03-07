@@ -1,186 +1,123 @@
-const mongoose = require('mongoose');
+const express = require('express');
+const { check } = require('express-validator');
+const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 
-const serviceRequestSchema = new mongoose.Schema(
-  {
-    requestNumber: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    project: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Project',
-      required: true,
-    },
-    title: {
-      type: String,
-      required: [true, 'El título de la solicitud es obligatorio'],
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: [true, 'La descripción de la solicitud es obligatoria'],
-      trim: true,
-    },
-    priority: {
-      type: String,
-      enum: ['Alta', 'Media', 'Baja'],
-      default: 'Media',
-    },
-    status: {
-      type: String,
-      enum: ['Solicitada', 'En revisión', 'Aceptada', 'Finalizada', 'Cancelada'],
-      default: 'Solicitada',
-    },
-    requestType: {
-      type: String,
-      enum: ['Entrega final', 'Entrega provisoria', 'Reparación en Garantía', 'Reparación fuera de Garantía', 'Otro'],
-      default: 'Entrega provisoria',
-    },
-    location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point',
-      },
-      coordinates: {
-        type: [Number],
-        default: [0, 0],
-      },
-      address: String,
-    },
-    requestedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    scheduledDate: {
-      type: Date,
-    },
-    completionDate: {
-      type: Date,
-    },
-    attachments: [
-      {
-        url: String,
-        name: String,
-        type: String,
-        uploadedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        uploadedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-    comments: [
-      {
-        text: String,
-        createdBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-    history: [
-      {
-        status: String,
-        changedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        changedAt: {
-          type: Date,
-          default: Date.now,
-        },
-        notes: String,
-      },
-    ],
-    renditions: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Rendition',
-      },
-    ],
+// Middleware
+const { protect, authorize } = require('../middlewares/auth.middleware');
+
+// Controladores
+const {
+  createServiceRequest,
+  getServiceRequests,
+  getServiceRequestById,
+  updateServiceRequest,
+  deleteServiceRequest,
+  addComment,
+  uploadAttachments,
+  changeStatus,
+} = require('../controllers/serviceRequest.controller');
+
+// Configuración de multer para carga de archivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../../public/uploads/'));
   },
-  { timestamps: true }
-);
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'sr-' + uniqueSuffix + ext);
+  },
+});
 
-// Índices para búsquedas eficientes
-serviceRequestSchema.index({ requestNumber: 1 }, { unique: true });
-serviceRequestSchema.index({ project: 1 });
-serviceRequestSchema.index({ status: 1 });
-serviceRequestSchema.index({ priority: 1 });
-serviceRequestSchema.index({ 'requestedBy': 1 });
-serviceRequestSchema.index({ 'assignedTo': 1 });
-serviceRequestSchema.index({ 'location.coordinates': '2dsphere' });
-
-// Método para generar un número de solicitud único
-serviceRequestSchema.statics.generateRequestNumber = async function() {
-  const today = new Date();
-  const year = today.getFullYear().toString().slice(-2);
-  const month = (today.getMonth() + 1).toString().padStart(2, '0');
-  
-  // Obtener la última solicitud para generar el número secuencial
-  const lastRequest = await this.findOne({}, {}, { sort: { 'createdAt': -1 } });
-  
-  let sequenceNumber = 1;
-  if (lastRequest && lastRequest.requestNumber) {
-    // Extraer el número secuencial del último request
-    const lastSequenceStr = lastRequest.requestNumber.split('-')[2];
-    if (lastSequenceStr) {
-      sequenceNumber = parseInt(lastSequenceStr, 10) + 1;
-    }
+const fileFilter = (req, file, cb) => {
+  // Aceptar imágenes, PDFs, videos y documentos
+  if (
+    file.mimetype.startsWith('image/') ||
+    file.mimetype === 'application/pdf' ||
+    file.mimetype.startsWith('video/') ||
+    file.mimetype === 'application/msword' ||
+    file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.mimetype === 'application/vnd.ms-excel' ||
+    file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error('Formato de archivo no soportado'), false);
   }
-  
-  // Formatear como SR-YYMM-0001
-  return `SR-${year}${month}-${sequenceNumber.toString().padStart(4, '0')}`;
 };
 
-// Middleware para actualizar el historial cuando cambia el estado
-serviceRequestSchema.pre('save', async function (next) {
-  if (this.isNew) {
-    // Generar número de solicitud si es nuevo
-    if (!this.requestNumber) {
-      this.requestNumber = await this.constructor.generateRequestNumber();
-    }
-    
-    // Añadir primer estado al historial
-    this.history.push({
-      status: this.status,
-      changedBy: this.requestedBy,
-      notes: 'Solicitud creada',
-    });
-  } else if (this.isModified('status')) {
-    // Añadir cambio de estado al historial
-    this.history.push({
-      status: this.status,
-      changedBy: this._lastModifiedBy || this.requestedBy, // Se debe establecer _lastModifiedBy antes de guardar
-      notes: this._statusChangeNotes || '',
-    });
-  }
-  
-  next();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50 MB
+  },
+  fileFilter: fileFilter,
 });
 
-// Middleware para actualizar métricas del proyecto asociado
-serviceRequestSchema.post('save', async function () {
-  if (this.project) {
-    const Project = mongoose.model('Project');
-    await Project.updateMetrics(this.project);
-  }
-});
+// Rutas de solicitudes de servicio
+router
+  .route('/')
+  .post(
+    [
+      protect,
+      check('project', 'El proyecto es obligatorio').isMongoId(),
+      check('title', 'El título es obligatorio').not().isEmpty(),
+      check('description', 'La descripción es obligatoria').not().isEmpty(),
+    ],
+    createServiceRequest
+  )
+  .get(protect, getServiceRequests);
 
-const ServiceRequest = mongoose.model('ServiceRequest', serviceRequestSchema);
+router
+  .route('/:id')
+  .get(protect, getServiceRequestById)
+  .put(
+    [
+      protect,
+      authorize('admin'),
+      check('title', 'El título es obligatorio').optional().not().isEmpty(),
+      check('description', 'La descripción es obligatoria').optional().not().isEmpty(),
+    ],
+    updateServiceRequest
+  )
+  .delete(protect, authorize('admin'), deleteServiceRequest);
 
-module.exports = ServiceRequest;
+// Ruta para cambiar estado
+router.put(
+  '/:id/status',
+  [
+    protect,
+    authorize('admin', 'technician'),
+    check('status', 'El estado es obligatorio').isIn([
+      'Solicitada',
+      'En revisión',
+      'Aceptada',
+      'Finalizada',
+      'Cancelada',
+    ]),
+    check('notes', 'Las notas son obligatorias').optional().not().isEmpty(),
+  ],
+  changeStatus
+);
+
+// Ruta para agregar comentarios
+router.post(
+  '/:id/comments',
+  [
+    protect,
+    check('text', 'El comentario es obligatorio').not().isEmpty(),
+  ],
+  addComment
+);
+
+// Ruta para subir archivos adjuntos
+router.post(
+  '/:id/attachments',
+  protect,
+  upload.array('files', 10),
+  uploadAttachments
+);
+
+module.exports = router;
