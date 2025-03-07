@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { getServiceRequestsCountByProject } from '../../services/serviceRequestService';import { getServiceRequestsCountByPimport React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Button, Spinner, Alert, Badge, Form, InputGroup } from 'react-bootstrap';
 import { FaSearch, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaEye, FaClipboardList } from 'react-icons/fa';
 import { getProjects } from '../../services/projectService';
-import { getServiceRequestsCountByProject } from '../../services/serviceRequestService';
+import { getProjectServiceRequestsCount } from '../../services/serviceRequestService';
 import ClientLayout from '../layouts/ClientLayout';
 
 const ProjectList = () => {
@@ -31,7 +31,7 @@ const ProjectList = () => {
         const counts = {};
         for (const project of response.data) {
           try {
-            const countResponse = await getServiceRequestsCountByProject(project.id);
+            const countResponse = await getProjectServiceRequestsCount(project.id);
             counts[project.id] = countResponse.count;
           } catch (err) {
             console.error(`Error al obtener conteo para proyecto ${project.id}:`, err);

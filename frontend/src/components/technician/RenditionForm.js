@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Form, Button, Card, Alert, Spinner, Row, Col } from 'react-bootstrap';
-import { Formik, Field, ErrorMessage, FieldArray } from 'formik';
+import { Formik, Form as FormikForm, FieldArray } from 'formik';
 import * as Yup from 'yup';
 import { FaPlus, FaTrash, FaCamera, FaUpload, FaSave, FaMapMarkerAlt } from 'react-icons/fa';
-import { createRendition } from '../../services/renditionService';
+import { createRendition, addExpenseToRendition } from '../../services/renditionService';
 import { getServiceRequestById } from '../../services/serviceRequestService';
 import { getExpenseCategories } from '../../services/expenseCategoryService';
 import TechnicianLayout from '../layouts/TechnicianLayout';

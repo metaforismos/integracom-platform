@@ -1,71 +1,28 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || 'https://backend-production-40fa.up.railway.app';
 
-// Iniciar sesión
 export const login = async (credentials) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/login`, credentials);
+    const response = await axios.post(`${API_URL}/login`, credentials);
     return response.data;
   } catch (error) {
-    throw error;
+    throw error.response?.data || error.message;
   }
 };
 
-// Obtener perfil de usuario
-export const getProfile = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/auth/me`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Enviar solicitud de recuperación de contraseña
-export const forgotPassword = async (email) => {
-  try {
-    const response = await axios.post(`${API_URL}/auth/forgot-password`, { email });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Actualizar perfil de usuario
-export const updateProfile = async (userData) => {
-  try {
-    const response = await axios.put(`${API_URL}/users/profile/update`, userData);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Subir imagen de perfil
-export const uploadProfilePicture = async (id, formData) => {
-  try {
-    const response = await axios.put(
-      `${API_URL}/users/${id}/profile-picture`, 
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      }
-    );
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Verificar si el token es válido
 export const verifyToken = async () => {
   try {
-    const response = await axios.get(`${API_URL}/auth/me`);
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    
+    const response = await axios.get(`${API_URL}/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return response.data;
   } catch (error) {
-    throw error;
+    throw error.response?.data || error.message;
   }
 };

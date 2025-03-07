@@ -9,7 +9,7 @@ import {
   FaClipboardList,
   FaSignOutAlt,
   FaCog,
-  FaBars
+  // FaBars
 } from 'react-icons/fa';
 import { useAuth } from '../../contexts/authContext';
 import { getUnreadNotifications } from '../../services/notificationService';
@@ -18,7 +18,7 @@ const ClientLayout = ({ children }) => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showNotifications, setShowNotifications] = useState(false);
+  // const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
