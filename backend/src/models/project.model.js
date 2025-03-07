@@ -160,7 +160,6 @@ const projectSchema = new mongoose.Schema(
 // Índices para búsquedas eficientes
 projectSchema.index({ name: 1 });
 projectSchema.index({ status: 1 });
-projectSchema.index({ orderNumber: 1 }, { unique: true });
 projectSchema.index({ 'clients': 1 });
 projectSchema.index({ 'technician': 1 });
 
