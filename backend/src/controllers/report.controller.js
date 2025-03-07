@@ -1,7 +1,7 @@
 const Project = require('../models/project.model');
 const ServiceRequest = require('../models/serviceRequest.model');
 const Rendition = require('../models/rendition.model');
-const User = require('../models/user.model');
+const User = require('../models/user.models');
 const mongoose = require('mongoose');
 
 // @desc    Obtener reporte de proyectos
