@@ -117,7 +117,6 @@ const serviceRequestSchema = new mongoose.Schema(
 );
 
 // Índices para búsquedas eficientes
-serviceRequestSchema.index({ requestNumber: 1 }, { unique: true });
 serviceRequestSchema.index({ project: 1 });
 serviceRequestSchema.index({ status: 1 });
 serviceRequestSchema.index({ priority: 1 });

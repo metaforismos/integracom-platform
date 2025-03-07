@@ -125,7 +125,6 @@ const renditionSchema = new mongoose.Schema(
 );
 
 // Índices para búsquedas eficientes
-renditionSchema.index({ folio: 1 }, { unique: true });
 renditionSchema.index({ serviceRequest: 1 });
 renditionSchema.index({ project: 1 });
 renditionSchema.index({ technician: 1 });
