@@ -28,7 +28,7 @@ const {
   getLocationPointById,
   updateLocationPoint,
   deleteLocationPoint,
-} = require('../controllers/locationPoint.controller');
+} = require('../controllers/projectLocationPoint.controller');
 
 // Middleware
 const { protect, authorize } = require('../middlewares/auth.middleware');
