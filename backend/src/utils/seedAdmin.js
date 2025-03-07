@@ -1,6 +1,6 @@
 require('dotenv').config({ path: '../.env' });
 const mongoose = require('mongoose');
-const User = require('../models/user.model');
+const User = require('../models/user.models');
 
 const createAdminUser = async () => {
   try {
