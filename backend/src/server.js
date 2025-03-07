@@ -33,7 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
-app.use('/api/service-requests', serviceRequestsRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/renditions', renditionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
