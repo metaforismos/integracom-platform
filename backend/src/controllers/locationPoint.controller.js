@@ -1,165 +1,229 @@
-const express = require('express');
-const { check } = require('express-validator');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
+const Project = require('../models/project.model');
+const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 
-// Controladores
-const {
-  createProject,
-  getProjects,
-  getProjectById,
-  updateProject,
-  deleteProject,
-  uploadProjectPhotos,
-} = require('../controllers/project.controller');
+// @desc    Agregar un nuevo punto de localización a un proyecto
+// @route   POST /api/projects/:projectId/location-points
+// @access  Private/Admin
+exports.addLocationPoint = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-const {
-  addMilestone,
-  getMilestones,
-  getMilestoneById,
-  updateMilestone,
-  deleteMilestone,
-} = require('../controllers/milestone.controller');
+  try {
+    const { name, type, description, coordinates } = req.body;
+    const projectId = req.params.projectId;
 
-const {
-  addLocationPoint,
-  getLocationPoints,
-  getLocationPointById,
-  updateLocationPoint,
-  deleteLocationPoint,
-} = require('../controllers/projectLocationPoint.controller');
+    // Verificar si el proyecto existe
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proyecto no encontrado',
+      });
+    }
 
-// Middlewares
-const { protect, authorize } = require('../middlewares/auth.middleware');
+    // Crear el nuevo punto de localización
+    const newLocationPoint = {
+      name,
+      type: type || 'Otro',
+      description,
+      coordinates: {
+        type: 'Point',
+        coordinates: coordinates, // Debe ser [longitude, latitude]
+      },
+      createdBy: req.user._id,
+    };
 
-// Configuración de multer para carga de archivos
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../../public/uploads/'));
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  },
-});
+    // Agregar el punto al proyecto
+    project.locationPoints.push(newLocationPoint);
+    await project.save();
 
-const fileFilter = (req, file, cb) => {
-  // Aceptar imágenes, PDFs, videos y documentos
-  if (
-    file.mimetype.startsWith('image/') ||
-    file.mimetype === 'application/pdf' ||
-    file.mimetype.startsWith('video/') ||
-    file.mimetype === 'application/msword' ||
-    file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    file.mimetype === 'application/vnd.ms-excel' ||
-    file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  ) {
-    cb(null, true);
-  } else {
-    cb(new Error('Formato de archivo no soportado'), false);
+    res.status(201).json({
+      success: true,
+      data: project.locationPoints[project.locationPoints.length - 1],
+      message: 'Punto de localización agregado correctamente',
+    });
+  } catch (error) {
+    console.error('Error al agregar punto de localización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar punto de localización al proyecto',
+      error: error.message,
+    });
   }
 };
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50 MB
-  },
-  fileFilter: fileFilter,
-});
+// @desc    Obtener todos los puntos de localización de un proyecto
+// @route   GET /api/projects/:projectId/location-points
+// @access  Private
+exports.getLocationPoints = async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
 
-// Rutas de proyectos
-router
-  .route('/')
-  .post(
-    [
-      protect,
-      authorize('admin'),
-      check('name', 'El nombre es obligatorio').not().isEmpty(),
-      check('location', 'La ubicación es obligatoria').not().isEmpty(),
-    ],
-    createProject
-  )
-  .get(protect, getProjects);
+    // Verificar si el proyecto existe
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proyecto no encontrado',
+      });
+    }
 
-router
-  .route('/:id')
-  .get(protect, getProjectById)
-  .put(
-    [
-      protect,
-      authorize('admin'),
-      check('name', 'El nombre es obligatorio').not().isEmpty(),
-      check('location', 'La ubicación es obligatoria').not().isEmpty(),
-    ],
-    updateProject
-  )
-  .delete(protect, authorize('admin'), deleteProject);
+    res.status(200).json({
+      success: true,
+      count: project.locationPoints.length,
+      data: project.locationPoints,
+    });
+  } catch (error) {
+    console.error('Error al obtener puntos de localización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener puntos de localización del proyecto',
+      error: error.message,
+    });
+  }
+};
 
-// Rutas para fotos de proyectos
-router.post(
-  '/:id/photos',
-  protect,
-  authorize('admin', 'technician'),
-  upload.array('photos', 10),
-  uploadProjectPhotos
-);
+// @desc    Obtener un punto de localización específico de un proyecto
+// @route   GET /api/projects/:projectId/location-points/:pointId
+// @access  Private
+exports.getLocationPointById = async (req, res) => {
+  try {
+    const { projectId, pointId } = req.params;
 
-// Rutas para hitos de proyectos
-router
-  .route('/:projectId/milestones')
-  .post(
-    [
-      protect,
-      check('title', 'El título es obligatorio').not().isEmpty(),
-      check('description', 'La descripción es obligatoria').not().isEmpty(),
-    ],
-    upload.array('attachments', 5),
-    addMilestone
-  )
-  .get(protect, getMilestones);
+    // Verificar si el proyecto existe
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proyecto no encontrado',
+      });
+    }
 
-router
-  .route('/:projectId/milestones/:milestoneId')
-  .get(protect, getMilestoneById)
-  .put(
-    [
-      protect,
-      check('title', 'El título es obligatorio').optional().not().isEmpty(),
-      check('description', 'La descripción es obligatoria').optional().not().isEmpty(),
-    ],
-    upload.array('attachments', 5),
-    updateMilestone
-  )
-  .delete(protect, deleteMilestone);
+    // Encontrar el punto específico
+    const locationPoint = project.locationPoints.id(pointId);
+    if (!locationPoint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Punto de localización no encontrado',
+      });
+    }
 
-// Rutas para puntos de localización
-router
-  .route('/:projectId/location-points')
-  .post(
-    [
-      protect,
-      authorize('admin'),
-      check('name', 'El nombre es obligatorio').not().isEmpty(),
-      check('coordinates', 'Las coordenadas son obligatorias').isArray().notEmpty(),
-    ],
-    addLocationPoint
-  )
-  .get(protect, getLocationPoints);
+    res.status(200).json({
+      success: true,
+      data: locationPoint,
+    });
+  } catch (error) {
+    console.error('Error al obtener punto de localización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener punto de localización del proyecto',
+      error: error.message,
+    });
+  }
+};
 
-router
-  .route('/:projectId/location-points/:pointId')
-  .get(protect, getLocationPointById)
-  .put(
-    [
-      protect,
-      authorize('admin'),
-      check('name', 'El nombre es obligatorio').optional().not().isEmpty(),
-    ],
-    updateLocationPoint
-  )
-  .delete(protect, authorize('admin'), deleteLocationPoint);
+// @desc    Actualizar un punto de localización de un proyecto
+// @route   PUT /api/projects/:projectId/location-points/:pointId
+// @access  Private/Admin
+exports.updateLocationPoint = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-module.exports = router;
+  try {
+    const { projectId, pointId } = req.params;
+    const { name, type, description, coordinates } = req.body;
+
+    // Verificar si el proyecto existe
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proyecto no encontrado',
+      });
+    }
+
+    // Encontrar y actualizar el punto
+    const locationPoint = project.locationPoints.id(pointId);
+    if (!locationPoint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Punto de localización no encontrado',
+      });
+    }
+
+    // Actualizar campos
+    if (name) locationPoint.name = name;
+    if (type) locationPoint.type = type;
+    if (description !== undefined) locationPoint.description = description;
+    if (coordinates) {
+      locationPoint.coordinates = {
+        type: 'Point',
+        coordinates: coordinates,
+      };
+    }
+
+    await project.save();
+
+    res.status(200).json({
+      success: true,
+      data: locationPoint,
+      message: 'Punto de localización actualizado correctamente',
+    });
+  } catch (error) {
+    console.error('Error al actualizar punto de localización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar punto de localización del proyecto',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Eliminar un punto de localización de un proyecto
+// @route   DELETE /api/projects/:projectId/location-points/:pointId
+// @access  Private/Admin
+exports.deleteLocationPoint = async (req, res) => {
+  try {
+    const { projectId, pointId } = req.params;
+
+    // Verificar si el proyecto existe
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proyecto no encontrado',
+      });
+    }
+
+    // Encontrar el punto
+    const locationPoint = project.locationPoints.id(pointId);
+    if (!locationPoint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Punto de localización no encontrado',
+      });
+    }
+
+    // Eliminar el punto
+    project.locationPoints.pull(pointId);
+    await project.save();
+
+    res.status(200).json({
+      success: true,
+      data: {},
+      message: 'Punto de localización eliminado correctamente',
+    });
+  } catch (error) {
+    console.error('Error al eliminar punto de localización:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar punto de localización del proyecto',
+      error: error.message,
+    });
+  }
+};
