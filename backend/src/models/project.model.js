@@ -49,54 +49,6 @@ const projectSchema = new mongoose.Schema(
       required: [true, 'La ubicación del proyecto es obligatoria'],
       trim: true,
     },
-    coordinates: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point',
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        required: true,
-      },
-    },
-    locationPoints: [
-      {
-        name: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        type: {
-          type: String,
-          enum: ['Escuela', 'Baliza', 'Fuente de poder', 'Señalética', 'Letrero', 'Otro'],
-          default: 'Otro',
-        },
-        description: {
-          type: String,
-          trim: true,
-        },
-        coordinates: {
-          type: {
-            type: String,
-            enum: ['Point'],
-            default: 'Point',
-          },
-          coordinates: {
-            type: [Number], // [longitude, latitude]
-            required: true,
-          },
-        },
-        createdBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
     description: {
       type: String,
       trim: true,

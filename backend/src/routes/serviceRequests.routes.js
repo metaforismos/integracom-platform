@@ -34,8 +34,8 @@ const serviceRequestSchema = new mongoose.Schema(
     },
     requestType: {
       type: String,
-      enum: ['Mantenimiento', 'Reparación', 'Consulta', 'Emergencia', 'Otro'],
-      default: 'Mantenimiento',
+      enum: ['Entrega final', 'Entrega provisoria', 'Reparación en Garantía', 'Reparación fuera de Garantía', 'Otro'],
+      default: 'Entrega provisoria',
     },
     location: {
       type: {

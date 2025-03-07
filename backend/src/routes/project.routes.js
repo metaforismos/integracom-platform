@@ -30,7 +30,7 @@ const {
   deleteLocationPoint,
 } = require('../controllers/locationPoint.controller');
 
-// Middlewares
+// Middleware
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
 // Configuración de multer para carga de archivos
