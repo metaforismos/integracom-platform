@@ -1,6 +1,6 @@
 const ServiceRequest = require('../models/serviceRequest.model');
 const Project = require('../models/project.model');
-const User = require('../models/user.model');
+const User = require('../models/user.models');
 const Notification = require('../models/notification.model');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
